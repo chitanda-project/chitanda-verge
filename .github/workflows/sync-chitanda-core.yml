@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '0 */2 * * *' # Check every 2 hours
   workflow_dispatch:
+  repository_dispatch:
+    types: [chitanda-core-updated]
 
 permissions:
   contents: write
@@ -27,7 +29,7 @@ jobs:
           LATEST_SHA=$(curl -s -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${CORE_REPO}/commits/main" | jq -r '.sha // empty')
           if [ -z "$LATEST_SHA" ] || [ "$LATEST_SHA" = "null" ]; then
             echo "Failed to retrieve latest commit from $CORE_REPO."
-            exit 1
+            LATEST_SHA=""
           fi
           
           LATEST_TAG=$(curl -s -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${CORE_REPO}/releases?per_page=10" | jq -r '[.[] | select(.tag_name | startswith("v1."))] | .[0].tag_name // empty')
@@ -44,19 +46,39 @@ jobs:
           if [ -f .chitanda/core-tag.txt ]; then
             CURRENT_TAG=$(cat .chitanda/core-tag.txt | tr -d '[:space:]')
           fi
+
+          # Asset checksum tracking (detects overwritten files with unchanged tag)
+          RELEASE_SUMS=$(curl -fsSL --retry 3 "https://github.com/${CORE_REPO}/releases/download/${LATEST_TAG:-v1.19.31}/sha256sums.txt" 2>/dev/null | sha256sum | awk '{print $1}' || true)
+          ALPHA_SUMS=$(curl -fsSL --retry 3 "https://github.com/${CORE_REPO}/releases/download/Prerelease-Alpha/sha256sums.txt" 2>/dev/null | sha256sum | awk '{print $1}' || true)
+          COMBINED_SUMS="${RELEASE_SUMS}_${ALPHA_SUMS}"
+
+          CURRENT_SUMS=""
+          if [ -f .chitanda/core-sums-hash.txt ]; then
+            CURRENT_SUMS=$(cat .chitanda/core-sums-hash.txt | tr -d '[:space:]')
+          fi
           
           echo "Current tracked commit: '$CURRENT_SHA'"
           echo "Latest upstream commit:  '$LATEST_SHA'"
           echo "Current tracked tag:    '$CURRENT_TAG'"
           echo "Latest upstream tag:     '$LATEST_TAG'"
+          echo "Current tracked sums:   '$CURRENT_SUMS'"
+          echo "Latest asset sums hash: '$COMBINED_SUMS'"
           
           HAS_UPDATE=false
-          if [ "$LATEST_SHA" != "$CURRENT_SHA" ]; then
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "Direct repository_dispatch event received from core repository!"
+            HAS_UPDATE=true
+          fi
+          if [ -n "$LATEST_SHA" ] && [ "$LATEST_SHA" != "$CURRENT_SHA" ]; then
             echo "Core commit update detected!"
             HAS_UPDATE=true
           fi
           if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "$CURRENT_TAG" ]; then
             echo "Core tag update detected!"
+            HAS_UPDATE=true
+          fi
+          if [ "$COMBINED_SUMS" != "_" ] && [ "$COMBINED_SUMS" != "$CURRENT_SUMS" ]; then
+            echo "Core release asset checksums changed (overwritten binary detected)!"
             HAS_UPDATE=true
           fi
           
@@ -65,6 +87,7 @@ jobs:
             echo "latest_sha=$LATEST_SHA" >> $GITHUB_OUTPUT
             echo "short_sha=${LATEST_SHA:0:7}" >> $GITHUB_OUTPUT
             echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "combined_sums=$COMBINED_SUMS" >> $GITHUB_OUTPUT
           else
             echo "Core is up-to-date."
             echo "has_update=false" >> $GITHUB_OUTPUT
@@ -72,23 +95,29 @@ jobs:
 
       - name: Update Tracked Metadata and Trigger Build
         if: steps.check_core.outputs.has_update == 'true'
+        env:
+          TRIGGER_TOKEN: ${{ secrets.DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p .chitanda
-          echo "${{ steps.check_core.outputs.latest_sha }}" > .chitanda/core-commit.txt
+          if [ -n "${{ steps.check_core.outputs.latest_sha }}" ]; then
+            echo "${{ steps.check_core.outputs.latest_sha }}" > .chitanda/core-commit.txt
+          fi
           if [ -n "${{ steps.check_core.outputs.latest_tag }}" ]; then
             echo "${{ steps.check_core.outputs.latest_tag }}" > .chitanda/core-tag.txt
+          fi
+          if [ -n "${{ steps.check_core.outputs.combined_sums }}" ]; then
+            echo "${{ steps.check_core.outputs.combined_sums }}" > .chitanda/core-sums-hash.txt
           fi
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .chitanda/core-commit.txt .chitanda/core-tag.txt
-          git commit -m "chore(core): sync Chitanda core to ${{ steps.check_core.outputs.latest_tag }} (${{ steps.check_core.outputs.short_sha }})"
-          git push origin main
+          git add .chitanda/core-commit.txt .chitanda/core-tag.txt .chitanda/core-sums-hash.txt 2>/dev/null || true
+          git diff --staged --quiet || (git commit -m "chore(core): sync Chitanda core metadata" && git push origin main)
           
           echo "Triggering build-release.yml workflow..."
           curl -s -X POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer $TRIGGER_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-release.yml/dispatches" \
             -d '{"ref":"main","inputs":{"core_tag":"${{ steps.check_core.outputs.latest_tag }}"}}'
-          echo "Build triggered."
+          echo "Build triggered successfully."
