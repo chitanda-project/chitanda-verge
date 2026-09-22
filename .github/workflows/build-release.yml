@@ -15,6 +15,11 @@ on:
         description: 'Verge release tag'
         required: false
         default: ''
+      force_rebuild:
+        description: 'Force rebuild even if assets exist'
+        required: false
+        type: boolean
+        default: false
 permissions: write-all
 env:
   CARGO_INCREMENTAL: 0
@@ -258,6 +263,12 @@ jobs:
             *) CHECK_ASSET="" ;;
           esac
 
+          if [ "${{ github.event.inputs.force_rebuild }}" = "true" ] || [ -n "${{ github.event.inputs.core_tag }}" ]; then
+            echo "Force rebuild or core_tag provided. Proceeding with build."
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           if [ -n "$CHECK_ASSET" ]; then
             echo "Checking if asset $CHECK_ASSET exists in release $TAG..."
             ASSETS=$(gh api repos/${{ github.repository }}/releases/tags/"$TAG" --jq '.assets[].name' 2>/dev/null || true)
@@ -391,6 +402,12 @@ jobs:
           TAG="${{ needs.check_tag_version.outputs.tag_name || github.ref_name }}"
           VERSION="${TAG#v}"
           CHECK_ASSET="Clash.Verge_${VERSION}_${{ matrix.arch }}.deb"
+          if [ "${{ github.event.inputs.force_rebuild }}" = "true" ] || [ -n "${{ github.event.inputs.core_tag }}" ]; then
+            echo "Force rebuild or core_tag provided. Proceeding with build."
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "Checking if asset $CHECK_ASSET exists in release $TAG..."
           ASSETS=$(gh api repos/${{ github.repository }}/releases/tags/"$TAG" --jq '.assets[].name' 2>/dev/null || true)
           if echo "$ASSETS" | grep -qx "$CHECK_ASSET"; then
@@ -557,6 +574,12 @@ jobs:
           TAG="${{ needs.check_tag_version.outputs.tag_name || github.ref_name }}"
           VERSION="${TAG#v}"
           CHECK_ASSET="Clash.Verge_${VERSION}_${{ matrix.arch }}_fixed_webview2-setup.exe"
+          if [ "${{ github.event.inputs.force_rebuild }}" = "true" ] || [ -n "${{ github.event.inputs.core_tag }}" ]; then
+            echo "Force rebuild or core_tag provided. Proceeding with build."
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "Checking if asset $CHECK_ASSET exists in release $TAG..."
           ASSETS=$(gh api repos/${{ github.repository }}/releases/tags/"$TAG" --jq '.assets[].name' 2>/dev/null || true)
           if echo "$ASSETS" | grep -qx "$CHECK_ASSET"; then
