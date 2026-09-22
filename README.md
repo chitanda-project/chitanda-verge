@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="https://raw.githubusercontent.com/chitanda-project/chitanda/main/public/avatar.webp" alt="Chitanda" width="120" />
+
 # 🌸 Chitanda Verge (千反田 Verge)
 
 **次世代デスクトップ向け高性能プロキシクライアント**  
