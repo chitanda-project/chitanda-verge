@@ -1,99 +1,115 @@
-<h1 align="center">
-  <img src="./src-tauri/icons/icon.png" alt="Clash" width="128" />
-  <br>
-  🌸 Chitanda Verge
-  <br>
-</h1>
+<div align="center">
 
-<h3 align="center">
-A high-performance Mihomo GUI for Desktop with native <b>Chitanda Protocol</b> support, based on <a href="https://github.com/clash-verge-rev/clash-verge-rev">Clash Verge Rev</a> and <a href="https://github.com/tauri-apps/tauri">Tauri</a>.
-</h3>
+# 🌸 Chitanda Verge (千反田 Verge)
+
+**次世代デスクトップ向け高性能プロキシクライアント**  
+*Windows / macOS / Linux 向けクロスプラットフォーム GUI（Tauri 2 採用）*
+
+[![Release](https://img.shields.io/github/v/release/chitanda-project/chitanda-verge?color=blue&style=flat-square)](https://github.com/chitanda-project/chitanda-verge/releases)
+[![Build](https://github.com/chitanda-project/chitanda-verge/actions/workflows/build-release.yml/badge.svg)](https://github.com/chitanda-project/chitanda-verge/actions)
+[![License](https://img.shields.io/badge/License-GPL--3.0-green.svg?style=flat-square)](LICENSE)
+[![Official Website](https://img.shields.io/badge/Official-chitanda.net-blue?style=flat-square)](https://chitanda.net)
 
 <p align="center">
-  <a href="https://github.com/chitanda-project/chitanda-verge/releases"><img src="https://img.shields.io/github/v/release/chitanda-project/chitanda-verge?color=blue&style=flat-square" alt="Release" /></a>
-  <a href="https://github.com/chitanda-project/chitanda-verge/actions/workflows/build-release.yml"><img src="https://github.com/chitanda-project/chitanda-verge/actions/workflows/build-release.yml/badge.svg" alt="Build" /></a>
-  <a href="https://chitanda.net"><img src="https://img.shields.io/badge/Official-chitanda.net-blue?style=flat-square" alt="Website" /></a>
+  <b>Chitanda Verge</b> は、<a href="https://github.com/clash-verge-rev/clash-verge-rev">Clash Verge Rev</a> をベースに開発された、次世代プロキシコア <b><a href="https://github.com/chitanda-project/chitanda">Chitanda Core (Mihomo)</a></b> を標準搭載した公式デスクトップクライアントです。<br>
+  独自開発の <b>Chitanda プロトコル</b> に完全対応し、高度なルーティングと超高スループットをデスクトップ環境で提供します。
 </p>
 
-## Preview
+</div>
 
-| Dark                             | Light                             |
-| -------------------------------- | --------------------------------- |
-| ![预览](./docs/preview_dark.png) | ![预览](./docs/preview_light.png) |
-
-## Install
-
-请到发布页面下载内置 **Chitanda Mihomo 内核** 的安装包：[Release page](https://github.com/chitanda-project/chitanda-verge/releases)<br>
-Go to the [Release page](https://github.com/chitanda-project/chitanda-verge/releases) to download the corresponding installation package with pre-bundled Chitanda Mihomo Core.<br>
-Supports Windows (x64/ARM64), Linux (x64/ARM64) and macOS 11+ (Intel/Apple Silicon).
-
-#### 发行版说明
-
-| 版本        | 特征                                     | 链接                                                                                   |
-| :---------- | :--------------------------------------- | :------------------------------------------------------------------------------------- |
-| Stable      | 正式版，内置稳定版 Chitanda 内核，适合日常使用。 | [Release](https://github.com/chitanda-project/chitanda-verge/releases)                 |
-| AutoBuild   | 滚动构建版，同步最新内核更新与上游特性。 | [AutoBuild](https://github.com/chitanda-project/chitanda-verge/releases/tag/autobuild) |
+> [!WARNING]
+> ### ⚠️ 免責事項 (Disclaimer)
+> 本プロジェクトおよび関連リソースは、学術研究、ネットワークセキュリティ検証、および正当な管理運用を目的として公開・提供されています。
+> 
+> 1. **法令遵守の義務**：本ソフトウェアおよび関連コードを利用する際は、**必ずご利用者ご自身の所在国・地域の法令および規則を遵守してください**。
+> 2. **利用の禁止**：本ソフトウェアの利用が所在国または地域の法令・規則に違反する場合、**いかなる目的であっても本ソフトウェアのダウンロード、インストール、実行、および二次配布を行わないでください**。
+> 3. **免責条項**：開発者およびプロジェクト保守管理者は、本ソフトウェアの使用、誤用、またはそれに関連して生じたいかなる損害、法的紛争、および責任についても一切の責任を負いません。
 
 ---
 
-## Features
+## プレビュー (Preview)
 
-- 基于性能强劲的 Rust 和 Tauri 2 框架
-- 内置 **[Chitanda Mihomo 内核](https://github.com/chitanda-project/chitanda)**，原生支持 Chitanda 协议，并支持切换 `Alpha` 版本内核。
-- 简洁美观的用户界面，支持自定义主题颜色、代理组/托盘图标以及 `CSS Injection`。
-- 配置文件管理和增强（Merge 和 Script），配置文件语法提示。
-- 系统代理和守卫、`TUN(虚拟网卡)` 模式。
-- 可视化节点和规则编辑
-- WebDav 配置备份和同步
+| ダークモード (Dark) | ライトモード (Light) |
+| :--- | :--- |
+| ![Preview Dark](./docs/preview_dark.png) | ![Preview Light](./docs/preview_light.png) |
 
-### FAQ
+---
 
-Refer to [Doc FAQ Page](https://clash-verge-rev.github.io/faq/windows.html)
+## 主な機能 (Features)
 
-### Donation
+- 🌸 **Chitanda プロトコル標準サポート**：
+  - `h2`（TLS 1.3 + HTTP/2 多重化）、`stream`（RawStream 高速専用線モード）、`h3`（HTTP/3 QUIC）など、次世代トランスポートキャリアをネイティブサポート。
+- ⚡ **超軽量かつ高速**：
+  - Rust と Tauri 2 アーキテクチャにより、極限までメモリ消費を抑えた軽快な動作を実現。
+- 🛡️ **TUN（仮想ネットワークカード）モード**：
+  - システム全体のネットワーク通信を透過的にプロキシ処理（管理者権限サービス同梱）。
+- 🎨 **自由度の高いカスタマイズ**：
+  - ダーク / ライトテーマ、カスタムアクセントカラー、トレイアイコン変更、CSS インジェクションに対応。
+- 📜 **高度なプロファイル管理**：
+  - Merge（差分マージ）および Script（JavaScript 拡張スクリプト）による柔軟なルール・プロキシグループ制御。
+- 🔄 **コアのワンクリック切り替え**：
+  - 安定版（Stable）および最新実験版（Alpha）の Chitanda 内核をアプリ内で容易に切り替え可能。
+- 💾 **WebDAV バックアップ & 同期**：
+  - プロファイルや設定のクラウド同期に対応。
 
-[捐助Clash Verge Rev的开发](https://github.com/sponsors/clash-verge-rev)
+---
 
-## Development
+## インストール (Installation)
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for more details.
+最新のインストーラーおよびポータブル版は、リリースページよりダウンロードしてください：  
+📦 **[リリースページ (Releases)](https://github.com/chitanda-project/chitanda-verge/releases)**
 
-To run the development server, execute the following commands after all prerequisites for **Tauri** are installed:
+### 対応プラットフォーム & 発行版
 
-```shell
-pnpm i
+| プラットフォーム | アーキテクチャ | 形式 |
+| :--- | :--- | :--- |
+| **Windows** | x64 (64-bit) / ARM64 | インストーラー (`.exe`) / ポータブル版 (`.zip`) |
+| **macOS** | Apple Silicon (Mシリーズ) / Intel (x64) | DMG パッケージ (`.dmg`) |
+| **Linux** | x64 (amd64) / ARM64 (aarch64) | Debian パッケージ (`.deb`) / AppImage / RPM |
+
+#### エディションの選び方
+
+| エディション | 特徴 | リンク |
+| :--- | :--- | :--- |
+| **Stable（推奨）** | 正式版。安定版 Chitanda 内核を同梱し、日常利用に最適です。 | [Releases](https://github.com/chitanda-project/chitanda-verge/releases) |
+| **AutoBuild** | 開発版。最新の上流機能およびテスト内核をいち早く反映したビルドです。 | [AutoBuild](https://github.com/chitanda-project/chitanda-verge/releases/tag/autobuild) |
+
+---
+
+## 開発とビルド (Development)
+
+ビルド要件：**Node.js 20+**, **pnpm**, **Rust (cargo)**
+
+```bash
+# 依存関係のインストール
+pnpm install
+
+# Chitanda 内核およびリソースの事前取得
 pnpm run prebuild
-pnpm dev
+
+# 開発サーバーの起動
+pnpm run dev
 ```
 
-`pnpm dev` preserves the Development Channel's installed service state: an
-existing service is used, while a previously uninstalled service remains
-uninstalled and the app starts in Sidecar mode. Use `pnpm dev:service` to
-explicitly install or update the isolated development service before launch,
-or `pnpm dev:sidecar` to force the unprivileged Sidecar workflow.
+---
 
-## Contributions
+## プライバシー (Privacy)
 
-Issue and PR welcome!
+Chitanda Verge は、いかなる利用者の個人情報やアクセスログも収集しません。設定およびログはすべてご利用の端末ローカルにのみ保存されます。詳細は [PRIVACY.md](./PRIVACY.md) をご参照ください。
 
-## Acknowledgement
+---
 
-Clash Verge rev was based on or inspired by these projects and so on:
+## クレジット (Acknowledgements)
 
-- [zzzgydi/clash-verge](https://github.com/zzzgydi/clash-verge): A Clash GUI based on tauri. Supports Windows, macOS and Linux.
-- [tauri-apps/tauri](https://github.com/tauri-apps/tauri): Build smaller, faster, and more secure desktop applications with a web frontend.
-- [Dreamacro/clash](https://github.com/Dreamacro/clash): A rule-based tunnel in Go.
-- [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo): A rule-based tunnel in Go.
-- [Fndroid/clash_for_windows_pkg](https://github.com/Fndroid/clash_for_windows_pkg): A Windows/macOS GUI based on Clash.
-- [vitejs/vite](https://github.com/vitejs/vite): Next generation frontend tooling. It's fast!
+本プロジェクトは、以下の素晴らしいオープンソースプロジェクトに基づいて開発・提供されています：
 
-## Privacy
+- [clash-verge-rev/clash-verge-rev](https://github.com/clash-verge-rev/clash-verge-rev) - Continuation of Clash Verge
+- [tauri-apps/tauri](https://github.com/tauri-apps/tauri) - Build smaller, faster, and more secure desktop applications
+- [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) - A rule-based tunnel in Go
+- [chitanda-project/chitanda](https://github.com/chitanda-project/chitanda) - High-performance secure proxy engine
 
-Clash Verge Rev 不收集任何用户数据，配置与日志仅保存在本地。详见[隐私政策](./PRIVACY.md)。
+---
 
-Clash Verge Rev does not collect any user data; configuration and logs stay on
-your own device. See the [Privacy Policy](./PRIVACY.md) for details.
+## ライセンス (License)
 
-## License
-
-GPL-3.0 License. See [License here](./LICENSE) for details.
+本ソフトウェアは [GPL-3.0 License](./LICENSE) のもとで公開されています。
