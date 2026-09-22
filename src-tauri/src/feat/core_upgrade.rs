@@ -22,9 +22,9 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-const RELEASE_VERSION_URL: &str = "https://github.com/MetaCubeX/mihomo/releases/latest/download/version.txt";
-const ALPHA_BASE_URL: &str = "https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha";
-const RELEASE_DOWNLOAD_URL: &str = "https://github.com/MetaCubeX/mihomo/releases/download";
+const RELEASE_VERSION_URL: &str = "https://raw.githubusercontent.com/chitanda-project/chitanda/main/releases/mihomo/version.txt";
+const ALPHA_BASE_URL: &str = "https://github.com/chitanda-project/chitanda/releases/download/Prerelease-Alpha";
+const RELEASE_DOWNLOAD_URL: &str = "https://github.com/chitanda-project/chitanda/releases/download";
 const VERSION_TIMEOUT_SECS: u64 = 20;
 const PACKAGE_TIMEOUT_SECS: u64 = 300;
 /// Well above any real core package, low enough that a wrong response cannot exhaust memory.
@@ -200,21 +200,20 @@ fn asset_base_name(alpha: bool) -> Result<&'static str> {
 
     let name = if cfg!(target_os = "windows") {
         match arch {
-            "x86_64" => "mihomo-windows-amd64-v2",
+            "x86_64" => "mihomo-windows-amd64",
             "x86" => "mihomo-windows-386",
             "aarch64" => "mihomo-windows-arm64",
             _ => return Err(unsupported()),
         }
     } else if cfg!(target_os = "macos") {
         match arch {
-            "x86_64" if alpha => "mihomo-darwin-amd64-v1-go122",
-            "x86_64" => "mihomo-darwin-amd64-v2-go122",
-            "aarch64" => "mihomo-darwin-arm64-go122",
+            "x86_64" => "mihomo-darwin-amd64",
+            "aarch64" => "mihomo-darwin-arm64",
             _ => return Err(unsupported()),
         }
     } else {
         match arch {
-            "x86_64" => "mihomo-linux-amd64-v2",
+            "x86_64" => "mihomo-linux-amd64",
             "x86" => "mihomo-linux-386",
             "aarch64" => "mihomo-linux-arm64",
             "arm" => "mihomo-linux-armv7",
