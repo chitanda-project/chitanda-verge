@@ -147,19 +147,7 @@ jobs:
 
           # Create ONE clean Pull Request
           PR_TITLE="chore(upstream): sync upstream Clash Verge Rev $TAG"
-          PR_BODY="## 🔄 Upstream Release Sync: $TAG
-
-Upstream [clash-verge-rev/clash-verge-rev](https://github.com/clash-verge-rev/clash-verge-rev) released a new version **$TAG**.
-
-### 🛡️ Chitanda Preservations Verified:
-- [x] **Chitanda Core Integration**: \`scripts/prebuild.mjs\` preserved.
-- [x] **Auto-updater & Minisign Keys**: \`src-tauri/tauri.conf.json\` endpoints & keys preserved.
-- [x] **In-app Core Upgrade**: \`src-tauri/src/feat/core_upgrade.rs\` Chitanda endpoints preserved.
-- [x] **Fixed WebView2 Configurations**: \`src-tauri/webview2.*.json\` preserved.
-- [x] **Documentation & Legal Disclaimer**: Japanese README and avatar preserved.
-
----
-*Created automatically by [upstream-app-sync](https://github.com/${{ github.repository }}/actions/workflows/upstream-app-sync.yml). Merging this PR will automatically trigger full multi-platform release build.*"
+          printf "## 🔄 Upstream Release Sync: %%s\n\nUpstream [clash-verge-rev/clash-verge-rev](https://github.com/clash-verge-rev/clash-verge-rev) released a new version **%%s**.\n\n### 🛡️ Chitanda Preservations Verified:\n- [x] **Chitanda Core Integration**: \`scripts/prebuild.mjs\` preserved.\n- [x] **Auto-updater & Minisign Keys**: \`src-tauri/tauri.conf.json\` endpoints & keys preserved.\n- [x] **In-app Core Upgrade**: \`src-tauri/src/feat/core_upgrade.rs\` Chitanda endpoints preserved.\n- [x] **Fixed WebView2 Configurations**: \`src-tauri/webview2.*.json\` preserved.\n- [x] **Documentation & Legal Disclaimer**: Japanese README and avatar preserved.\n\n---\n*Created automatically by [upstream-app-sync](https://github.com/%s/actions/workflows/upstream-app-sync.yml). Merging this PR will automatically trigger full multi-platform release build.*\n" "$TAG" "$TAG" "${{ github.repository }}" > pr_body.md
 
           # Check again if PR exists before creating
           EXISTING_PR=$(gh pr list --repo "${{ github.repository }}" --head "$BRANCH_NAME" --state all --json url --jq '.[0].url // empty' 2>/dev/null || true)
@@ -169,7 +157,7 @@ Upstream [clash-verge-rev/clash-verge-rev](https://github.com/clash-verge-rev/cl
             gh pr create \
               --repo "${{ github.repository }}" \
               --title "$PR_TITLE" \
-              --body "$PR_BODY" \
+              --body-file pr_body.md \
               --base main \
               --head "$BRANCH_NAME" || echo "PR already created or could not be recreated."
             echo "Pull Request successfully created."
