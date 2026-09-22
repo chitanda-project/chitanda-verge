@@ -28,6 +28,8 @@ jobs:
   check_tag_version:
     name: Check Release Tag and package.json Version Consistency
     runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.check_version.outputs.tag_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -35,6 +37,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check if tag is from main branch
+        if: github.event_name != 'workflow_dispatch'
         run: |
           TAG_REF="${GITHUB_REF##*/}"
           echo "Checking if tag $TAG_REF is from main branch..."
@@ -51,23 +54,28 @@ jobs:
           fi
 
       - name: Check tag and package.json version
+        id: check_version
         run: |
-          TAG_REF="${GITHUB_REF_NAME:-${GITHUB_REF##*/}}"
-          echo "Current tag: $TAG_REF"
-
           PKG_VERSION=$(jq -r .version package.json)
           echo "package.json version: $PKG_VERSION"
-
           EXPECTED_TAG="v$PKG_VERSION"
 
-          if [[ "$TAG_REF" != "$EXPECTED_TAG" ]]; then
-            echo "❌ Version mismatch:"
-            echo "   Git tag       : $TAG_REF"
-            echo "   package.json  : $EXPECTED_TAG"
-            exit 1
-          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_REF="$EXPECTED_TAG"
+            echo "Running via workflow_dispatch, using tag $TAG_REF"
+          else
+            TAG_REF="${GITHUB_REF_NAME:-${GITHUB_REF##*/}}"
+            echo "Current tag: $TAG_REF"
 
-          echo "✅ Tag and package.json version are consistent."
+            if [[ "$TAG_REF" != "$EXPECTED_TAG" ]]; then
+              echo "❌ Version mismatch:"
+              echo "   Git tag       : $TAG_REF"
+              echo "   package.json  : $EXPECTED_TAG"
+              exit 1
+            fi
+            echo "✅ Tag and package.json version are consistent."
+          fi
+          echo "tag_name=$TAG_REF" >> $GITHUB_OUTPUT
 
   prepare_release:
     name: Prepare Draft Release
@@ -80,19 +88,21 @@ jobs:
         id: prepare_release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ needs.check_tag_version.outputs.tag_name || github.ref_name }}
           target_commitish: ${{ github.sha }}
-          name: 'Chitanda Verge ${{ github.ref_name }}'
+          name: 'Chitanda Verge ${{ needs.check_tag_version.outputs.tag_name || github.ref_name }}'
           body: 'Draft release, will be updated later.'
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
-          prerelease: ${{ contains(github.ref_name, '-rc') }}
+          prerelease: ${{ contains(needs.check_tag_version.outputs.tag_name || github.ref_name, '-rc') }}
 
   update_tag:
     name: Update tag
     runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
     needs:
       [
+        check_tag_version,
         prepare_release,
         release,
         release-for-linux-arm,
@@ -113,7 +123,7 @@ jobs:
       - name: Set Env
         run: |
           echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
-          TAG_REF="${GITHUB_REF##*/}"
+          TAG_REF="${{ needs.check_tag_version.outputs.tag_name || github.ref_name }}"
           echo "TAG_NAME=$TAG_REF" >> $GITHUB_ENV
           VERSION=$(echo "$TAG_REF" | sed 's/^v//')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -188,7 +198,7 @@ jobs:
 
   release:
     name: Release Build
-    needs: [prepare_release]
+    needs: [check_tag_version, prepare_release]
     strategy:
       fail-fast: false
       matrix:
@@ -264,15 +274,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           releaseId: ${{ needs.prepare_release.outputs.release_id }}
-          tagName: ${{ github.ref_name }}
+          tagName: ${{ needs.check_tag_version.outputs.tag_name || github.ref_name }}
           releaseBody: 'Draft release, will be updated later.'
           tauriScript: pnpm
           args: --target ${{ matrix.target }}

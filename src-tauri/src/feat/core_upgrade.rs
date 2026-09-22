@@ -194,7 +194,7 @@ fn package_url(alpha: bool, version: &str) -> Result<std::string::String> {
 
 /// Mirrors the asset map in `scripts/prebuild.mjs` so an upgrade keeps the build variant
 /// the bundled sidecar was taken from.
-fn asset_base_name(alpha: bool) -> Result<&'static str> {
+fn asset_base_name(_alpha: bool) -> Result<&'static str> {
     let arch = std::env::consts::ARCH;
     let unsupported = || anyhow!("no mihomo release asset for {}-{arch}", std::env::consts::OS);
 
