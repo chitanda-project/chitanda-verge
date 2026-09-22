@@ -159,24 +159,30 @@ async function updateHashCache(targetPath) {
   }
 }
 
-// Mihomo release maps
+// Mihomo release maps (Chitanda Core)
 const META_ALPHA_VERSION_URL =
-  'https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt'
-const META_ALPHA_URL_PREFIX = `https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha`
+  process.env.CHITANDA_ALPHA_VERSION_URL ||
+  'https://github.com/chitanda-project/chitanda/releases/download/Prerelease-Alpha/version.txt'
+const META_ALPHA_URL_PREFIX =
+  process.env.CHITANDA_ALPHA_URL_PREFIX ||
+  `https://github.com/chitanda-project/chitanda/releases/download/Prerelease-Alpha`
 let META_ALPHA_VERSION
 
 const META_VERSION_URL =
-  'https://github.com/MetaCubeX/mihomo/releases/latest/download/version.txt'
-const META_URL_PREFIX = `https://github.com/MetaCubeX/mihomo/releases/download`
+  process.env.CHITANDA_VERSION_URL ||
+  'https://raw.githubusercontent.com/chitanda-project/chitanda/main/releases/mihomo/version.txt'
+const META_URL_PREFIX =
+  process.env.CHITANDA_URL_PREFIX ||
+  `https://github.com/chitanda-project/chitanda/releases/download`
 let META_VERSION
 
 const META_ALPHA_MAP = {
-  'win32-x64': 'mihomo-windows-amd64-v2',
+  'win32-x64': 'mihomo-windows-amd64',
   'win32-ia32': 'mihomo-windows-386',
   'win32-arm64': 'mihomo-windows-arm64',
-  'darwin-x64': 'mihomo-darwin-amd64-v1-go122',
-  'darwin-arm64': 'mihomo-darwin-arm64-go122',
-  'linux-x64': 'mihomo-linux-amd64-v2',
+  'darwin-x64': 'mihomo-darwin-amd64',
+  'darwin-arm64': 'mihomo-darwin-arm64',
+  'linux-x64': 'mihomo-linux-amd64',
   'linux-ia32': 'mihomo-linux-386',
   'linux-arm64': 'mihomo-linux-arm64',
   'linux-arm': 'mihomo-linux-armv7',
@@ -185,12 +191,12 @@ const META_ALPHA_MAP = {
 }
 
 const META_MAP = {
-  'win32-x64': 'mihomo-windows-amd64-v2',
+  'win32-x64': 'mihomo-windows-amd64',
   'win32-ia32': 'mihomo-windows-386',
   'win32-arm64': 'mihomo-windows-arm64',
-  'darwin-x64': 'mihomo-darwin-amd64-v2-go122',
-  'darwin-arm64': 'mihomo-darwin-arm64-go122',
-  'linux-x64': 'mihomo-linux-amd64-v2',
+  'darwin-x64': 'mihomo-darwin-amd64',
+  'darwin-arm64': 'mihomo-darwin-arm64',
+  'linux-x64': 'mihomo-linux-amd64',
   'linux-ia32': 'mihomo-linux-386',
   'linux-arm64': 'mihomo-linux-arm64',
   'linux-arm': 'mihomo-linux-armv7',
@@ -279,7 +285,7 @@ function clashMetaAlpha() {
   return {
     name: 'verge-mihomo-alpha',
     targetFile: `verge-mihomo-alpha-${SIDECAR_HOST}${isWin ? '.exe' : ''}`,
-    exeFile: `${name}${isWin ? '.exe' : ''}`,
+    exeFile: isWin ? 'mihomo.exe' : `${name}`,
     zipFile: `${name}-${META_ALPHA_VERSION}.${urlExt}`,
     downloadURL: `${META_ALPHA_URL_PREFIX}/${name}-${META_ALPHA_VERSION}.${urlExt}`,
   }
@@ -292,7 +298,7 @@ function clashMeta() {
   return {
     name: 'verge-mihomo',
     targetFile: `verge-mihomo-${SIDECAR_HOST}${isWin ? '.exe' : ''}`,
-    exeFile: `${name}${isWin ? '.exe' : ''}`,
+    exeFile: isWin ? 'mihomo.exe' : `${name}`,
     zipFile: `${name}-${META_VERSION}.${urlExt}`,
     downloadURL: `${META_URL_PREFIX}/${META_VERSION}/${name}-${META_VERSION}.${urlExt}`,
   }
