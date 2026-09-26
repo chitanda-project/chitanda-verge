@@ -127,6 +127,7 @@ export interface TranslationResources {
           badges: {
             adminMode: string
             adminServiceMode: string
+            notRunning: string
             serviceMode: string
             sidecarMode: string
           }
@@ -318,6 +319,14 @@ export interface TranslationResources {
         editor: {
           actions: {
             format: string
+          }
+          enhance: {
+            globalMerge: string
+            globalScript: string
+            order: string
+            profileMerge: string
+            profileScript: string
+            settingsPriority: string
           }
           messages: {
             readOnly: string
@@ -806,6 +815,7 @@ export interface TranslationResources {
             configUpdateFailed: string
             modeUpdateFailed: string
             restartFailed: string
+            serviceCoreStopped: string
             startFailed: string
             stopFailed: string
           }
@@ -835,7 +845,12 @@ export interface TranslationResources {
             versionUpdated: string
           }
           clashService: {
+            appDataNotOwned: string
             installSuccess: string
+            permissionFallback: string
+            permissionRejectedReason: string
+            permissionRepairGuide: string
+            permissionWritableReason: string
             sidecarFallback: string
             uninstallSuccess: string
           }
