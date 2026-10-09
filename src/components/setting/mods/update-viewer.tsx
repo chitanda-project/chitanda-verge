@@ -15,12 +15,7 @@ import type { Options as ReactMarkdownOptions } from 'react-markdown'
 
 import { BaseDialog, DialogRef } from '@/components/base'
 import { useUpdate } from '@/hooks/use-update'
-import {
-  cancelUpdateDownload,
-  installUpdate,
-  restartApp,
-} from '@/services/cmds'
-import { mutate } from '@/services/mutate'
+import { restartApp } from '@/services/cmds'
 import { showNotice } from '@/services/notice-service'
 import { useSetUpdateState, useUpdateState } from '@/services/states'
 import { openExternalUrl } from '@/utils/open-external-url'
@@ -275,19 +270,8 @@ export function UpdateViewer({ ref }: { ref?: Ref<DialogRef> }) {
     }
 
     try {
-      const result = await mutate(
-        () => installUpdate(updateInfo.version, onDownloadEvent),
-        {
-          id: 'install-app-update',
-          errorNotice: false,
-        },
-      )
-      if (result.ok && result.value) {
-        await mutate(() => restartApp(), {
-          id: 'restart-app',
-          errorNotice: false,
-        })
-      }
+      await updateInfo.downloadAndInstall(onDownloadEvent)
+      await restartApp()
     } catch (err: any) {
       showNotice.error(err)
     } finally {
@@ -350,15 +334,7 @@ export function UpdateViewer({ ref }: { ref?: Ref<DialogRef> }) {
       okBtn={t('settings.modals.update.actions.update')}
       cancelBtn={t('shared.actions.cancel')}
       onClose={() => setOpen(false)}
-      onCancel={() => {
-        if (updateState) {
-          void mutate(() => cancelUpdateDownload(), {
-            id: 'cancel-update-download',
-            errorNotice: false,
-          }).catch(showNotice.error)
-        }
-        setOpen(false)
-      }}
+      onCancel={() => setOpen(false)}
       onOk={onUpdate}
     >
       <Box
