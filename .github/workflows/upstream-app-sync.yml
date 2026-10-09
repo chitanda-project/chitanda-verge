@@ -18,6 +18,7 @@ permissions:
   contents: write
   pull-requests: write
   actions: write
+  workflows: write
 
 jobs:
   check-and-sync:
@@ -28,6 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Check Latest Upstream Tag & Existing PRs
         id: check_upstream
@@ -107,9 +109,19 @@ jobs:
           git fetch upstream --tags --force
 
           # Merge upstream tag preserving our side where conflicting
-          git merge -X theirs "$TAG" --no-edit -m "chore(upstream): merge upstream Verge $TAG" || (git merge --abort && git checkout "$TAG" -- .)
+          if ! git merge -X theirs "$TAG" --no-edit -m "chore(upstream): merge upstream Verge $TAG"; then
+            # Clean up modify/delete conflicts (especially deleted upstream workflows)
+            git rm -f --ignore-unmatch .github/workflows/* 2>/dev/null || true
+            if git diff --name-only --diff-filter=U | grep -q .; then
+              git merge --abort || true
+              git checkout "$TAG" -- .
+            else
+              git commit --no-edit -m "chore(upstream): merge upstream Verge $TAG" || true
+            fi
+          fi
 
           # Strictly restore Chitanda customized configs and security keys
+          rm -rf .github/workflows
           git checkout "$CURRENT_COMMIT" -- \
             scripts/prebuild.mjs \
             .chitanda/ \
