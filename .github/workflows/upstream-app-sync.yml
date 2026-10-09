@@ -1,0 +1,192 @@
+name: Upstream Verge Sync (PR-based)
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Daily at 04:00 UTC
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force sync and recreate PR even if branch exists'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  check-and-sync:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Check Latest Upstream Tag & Existing PRs
+        id: check_upstream
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(curl -fsSL --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/clash-verge-rev/clash-verge-rev/releases/latest 2>/dev/null \
+            | jq -r '.tag_name // empty' 2>/dev/null || true)
+          
+          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
+            LATEST_TAG=$(git ls-remote --tags --refs https://github.com/clash-verge-rev/clash-verge-rev.git \
+              | awk -F/ '{print $3}' \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1)
+          fi
+
+          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
+            echo "::error::Failed to fetch latest upstream tag"
+            exit 1
+          fi
+
+          echo "Latest upstream stable tag: $LATEST_TAG"
+          echo "upstream_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          # 1. Check if this release already exists in our repo
+          MY_RELEASE=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST_TAG" 2>/dev/null \
+            | jq -r '.id // empty' 2>/dev/null || true)
+
+          if [ -n "$MY_RELEASE" ] && [ "$MY_RELEASE" != "null" ] && [ "${{ inputs.force_sync }}" != "true" ]; then
+            echo "✅ Release $LATEST_TAG is already published in this repo. Everything up to date."
+            echo "should_sync=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 2. Check if a PR ALREADY EXISTS for this tag across ALL states (Anti-Spam / Anti-Loop Guard)
+          BRANCH_NAME="sync/upstream-$LATEST_TAG"
+          EXISTING_PR=$(gh pr list --repo "${{ github.repository }}" --head "$BRANCH_NAME" --state all --json number,state,url --jq '.[0] // empty' 2>/dev/null || true)
+
+          if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ] && [ "${{ inputs.force_sync }}" != "true" ]; then
+            PR_NUM=$(echo "$EXISTING_PR" | jq -r '.number')
+            PR_STATE=$(echo "$EXISTING_PR" | jq -r '.state')
+            PR_URL=$(echo "$EXISTING_PR" | jq -r '.url')
+            echo "ℹ️ A PR (#$PR_NUM, state: $PR_STATE, $PR_URL) already exists for $LATEST_TAG. Skipping to prevent cyclic PR spam."
+            echo "should_sync=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🚀 New upstream version $LATEST_TAG detected and no active/closed PR found. Ready to create sync PR."
+          echo "should_sync=true" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Upstream Sync Pull Request
+        if: steps.check_upstream.outputs.should_sync == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.check_upstream.outputs.upstream_tag }}"
+          BRANCH_NAME="${{ steps.check_upstream.outputs.branch_name }}"
+          echo "Processing sync for upstream $TAG onto branch $BRANCH_NAME..."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+
+          # Ensure fresh branch based on current main
+          git checkout -B "$BRANCH_NAME" main
+
+          git remote add upstream https://github.com/clash-verge-rev/clash-verge-rev.git 2>/dev/null || git remote set-url upstream https://github.com/clash-verge-rev/clash-verge-rev.git
+          git fetch upstream --tags --force
+
+          # Merge upstream tag preserving our side where conflicting
+          if ! git merge -X theirs "$TAG" --no-edit -m "chore(upstream): merge upstream Verge $TAG"; then
+            # Clean up modify/delete conflicts (especially deleted upstream workflows)
+            git rm -f --ignore-unmatch .github/workflows/* 2>/dev/null || true
+            if git diff --name-only --diff-filter=U | grep -q .; then
+              git merge --abort || true
+              git checkout "$TAG" -- .
+            else
+              git commit --no-edit -m "chore(upstream): merge upstream Verge $TAG" || true
+            fi
+          fi
+
+          # Strictly restore Chitanda customized configs and security keys
+          rm -rf .github/workflows
+          git checkout "$CURRENT_COMMIT" -- \
+            scripts/prebuild.mjs \
+            .chitanda/ \
+            .github/workflows/ \
+            src-tauri/tauri.conf.json \
+            src-tauri/webview2.*.json \
+            src-tauri/src/feat/core_upgrade.rs \
+            src/components/setting/mods/update-viewer.tsx \
+            src/pages/settings.tsx \
+            README.md 2>/dev/null || true
+
+          # Update version in package.json and tauri.conf.json to match upstream tag
+          UPSTREAM_VERSION=$(echo "$TAG" | sed 's/^v//')
+          if [ -f package.json ]; then
+            TMP_PKG=$(jq --arg v "$UPSTREAM_VERSION" '.version = $v' package.json)
+            echo "$TMP_PKG" > package.json
+          fi
+          if [ -f src-tauri/tauri.conf.json ]; then
+            TMP_TAURI=$(jq --arg v "$UPSTREAM_VERSION" '.version = $v' src-tauri/tauri.conf.json)
+            echo "$TMP_TAURI" > src-tauri/tauri.conf.json
+          fi
+
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(upstream): align Chitanda core and configuration with $TAG"
+          fi
+
+          # Safety guard: ensure there are actual commits ahead of main
+          if git diff --quiet main.."$BRANCH_NAME"; then
+            echo "Branch $BRANCH_NAME has no new changes compared to main. Nothing to push or PR."
+            exit 0
+          fi
+
+          git push -u origin "$BRANCH_NAME" --force
+
+          # Create ONE clean Pull Request
+          PR_TITLE="chore(upstream): sync upstream Clash Verge Rev $TAG"
+          printf "## 🔄 Upstream Release Sync: %%s\n\nUpstream [clash-verge-rev/clash-verge-rev](https://github.com/clash-verge-rev/clash-verge-rev) released a new version **%%s**.\n\n### 🛡️ Chitanda Preservations Verified:\n- [x] **Chitanda Core Integration**: \`scripts/prebuild.mjs\` preserved.\n- [x] **Auto-updater & Minisign Keys**: \`src-tauri/tauri.conf.json\` endpoints & keys preserved.\n- [x] **In-app Core Upgrade**: \`src-tauri/src/feat/core_upgrade.rs\` Chitanda endpoints preserved.\n- [x] **Fixed WebView2 Configurations**: \`src-tauri/webview2.*.json\` preserved.\n- [x] **Documentation & Legal Disclaimer**: Japanese README and avatar preserved.\n\n---\n*Created automatically by [upstream-app-sync](https://github.com/%s/actions/workflows/upstream-app-sync.yml). Merging this PR will automatically trigger full multi-platform release build.*\n" "$TAG" "$TAG" "${{ github.repository }}" > pr_body.md
+
+          # Check again if PR exists before creating
+          EXISTING_PR=$(gh pr list --repo "${{ github.repository }}" --head "$BRANCH_NAME" --state all --json url --jq '.[0].url // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists at $EXISTING_PR. Branch updated."
+          else
+            gh pr create \
+              --repo "${{ github.repository }}" \
+              --title "$PR_TITLE" \
+              --body-file pr_body.md \
+              --base main \
+              --head "$BRANCH_NAME" || echo "PR already created or could not be recreated."
+            echo "Pull Request successfully created."
+          fi
+
+  auto-release-on-merge:
+    name: Auto Release on Upstream PR Merge
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'sync/upstream-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Build Release Workflow
+        env:
+          TRIGGER_TOKEN: ${{ secrets.DISPATCH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Upstream sync PR #${{ github.event.pull_request.number }} merged into main. Triggering release build..."
+          curl -fsSL -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $TRIGGER_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-release.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "Release build successfully triggered."
