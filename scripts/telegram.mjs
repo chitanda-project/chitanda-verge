@@ -5,11 +5,16 @@ import axios from 'axios'
 import { log_error, log_info, log_success } from './utils.mjs'
 
 const CHAT_ID_RELEASE = process.env.TELEGRAM_CHAT_ID || '@clash_verge_re' // 正式发布频道
-const CHAT_ID_TEST = process.env.TELEGRAM_CHAT_ID_TEST || process.env.TELEGRAM_CHAT_ID || '@vergetest' // 测试频道
+const CHAT_ID_TEST =
+  process.env.TELEGRAM_CHAT_ID_TEST ||
+  process.env.TELEGRAM_CHAT_ID ||
+  '@vergetest' // 测试频道
 
 async function sendTelegramNotification() {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
-    log_info('TELEGRAM_BOT_TOKEN is not configured, skipping Telegram notification.')
+    log_info(
+      'TELEGRAM_BOT_TOKEN is not configured, skipping Telegram notification.',
+    )
     return
   }
 
@@ -132,7 +137,9 @@ async function sendTelegramNotification() {
       error,
     )
     if (isAutobuild) {
-      log_info('Autobuild Telegram notification failure is non-fatal. Continuing...')
+      log_info(
+        'Autobuild Telegram notification failure is non-fatal. Continuing...',
+      )
       return
     }
     process.exit(1)
