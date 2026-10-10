@@ -18,7 +18,9 @@
   "ignoreDependencies": ["lint-staged"],
   "ignoreIssues": {
     "src/types/generated/**": ["exports", "types"],
-    "src/services/contract.ts": ["exports", "types"]
+    "src/services/contract.ts": ["exports", "types"],
+    "src/services/cmds.ts": ["exports"],
+    "src/services/proxy-test-url.ts": ["exports"]
   },
   "cycles": {
     "dynamicImports": true
