@@ -143,6 +143,14 @@ jobs:
             echo "$TMP_TAURI" > src-tauri/tauri.conf.json
           fi
 
+          # Format code to satisfy upstream CI format checks
+          if command -v cargo >/dev/null 2>&1; then
+            cargo fmt --all || true
+          fi
+          if command -v npx >/dev/null 2>&1; then
+            npx @biomejs/biome format --write src-tauri/tauri.conf.json package.json 2>/dev/null || true
+          fi
+
           git add -A
           if ! git diff --staged --quiet; then
             git commit -m "chore(upstream): align Chitanda core and configuration with $TAG"
@@ -169,6 +177,7 @@ jobs:
               --repo "${{ github.repository }}" \
               --title "$PR_TITLE" \
               --body-file pr_body.md \
+              --label "no-issue-needed" \
               --base main \
               --head "$BRANCH_NAME" || echo "PR already created or could not be recreated."
             echo "Pull Request successfully created."
