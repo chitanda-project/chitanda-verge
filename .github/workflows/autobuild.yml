@@ -580,9 +580,8 @@ jobs:
           EOF
 
       - name: Send Telegram Notification
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
-        run: node scripts/telegram.mjs
         continue-on-error: true
+        run: node scripts/telegram.mjs
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           BUILD_TYPE: autobuild
