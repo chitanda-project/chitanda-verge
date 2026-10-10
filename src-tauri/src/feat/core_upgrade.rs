@@ -24,10 +24,8 @@ use std::{
 
 const RELEASE_VERSION_URL: &str =
     "https://raw.githubusercontent.com/chitanda-project/chitanda/main/releases/mihomo/version.txt";
-const ALPHA_BASE_URL: &str =
-    "https://github.com/chitanda-project/chitanda/releases/download/Prerelease-Alpha";
-const RELEASE_DOWNLOAD_URL: &str =
-    "https://github.com/chitanda-project/chitanda/releases/download";
+const ALPHA_BASE_URL: &str = "https://github.com/chitanda-project/chitanda/releases/download/Prerelease-Alpha";
+const RELEASE_DOWNLOAD_URL: &str = "https://github.com/chitanda-project/chitanda/releases/download";
 const VERSION_TIMEOUT_SECS: u64 = 20;
 const PACKAGE_TIMEOUT_SECS: u64 = 300;
 /// Well above any real core package, low enough that a wrong response cannot exhaust memory.
