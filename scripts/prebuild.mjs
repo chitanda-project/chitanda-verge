@@ -313,39 +313,55 @@ async function downloadFile(url, outPath) {
     process.env.https_proxy
   if (httpProxy) options.agent = new HttpsProxyAgent(httpProxy)
 
-  const response = await fetch(url, {
-    ...options,
-    method: 'GET',
-    headers: { 'Content-Type': 'application/octet-stream' },
-  })
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    await fsp.mkdir(path.dirname(outPath), { recursive: true })
-    await fsp.writeFile(outPath, body)
-    throw new Error(`Failed to download ${url}: status ${response.status}`)
+  let lastError
+  const maxRetries = 4
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        method: 'GET',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
+          Accept: '*/*',
+        },
+      })
+      if (!response.ok) {
+        throw new Error(`status ${response.status}`)
+      }
+
+      const buf = Buffer.from(await response.arrayBuffer())
+      if (url.endsWith('.gz') || url.endsWith('.tgz')) {
+        if (!(buf[0] === 0x1f && buf[1] === 0x8b)) {
+          throw new Error(
+            `Downloaded file for ${url} is not a valid gzip (magic mismatch).`,
+          )
+        }
+      } else if (url.endsWith('.zip')) {
+        if (!(buf[0] === 0x50 && buf[1] === 0x4b)) {
+          throw new Error(
+            `Downloaded file for ${url} is not a valid zip (magic mismatch).`,
+          )
+        }
+      }
+
+      await fsp.mkdir(path.dirname(outPath), { recursive: true })
+      await fsp.writeFile(outPath, buf)
+      log_success(`download finished: ${url}`)
+      return
+    } catch (err) {
+      lastError = err
+      log_error(
+        `downloadFile attempt ${attempt}/${maxRetries} failed for ${url}: ${err.message}`,
+      )
+      if (attempt < maxRetries) {
+        const delay = attempt * 3000
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      }
+    }
   }
 
-  const buf = Buffer.from(await response.arrayBuffer())
-  await fsp.mkdir(path.dirname(outPath), { recursive: true })
-
-  if (url.endsWith('.gz') || url.endsWith('.tgz')) {
-    if (!(buf[0] === 0x1f && buf[1] === 0x8b)) {
-      await fsp.writeFile(outPath, buf)
-      throw new Error(
-        `Downloaded file for ${url} is not a valid gzip (magic mismatch).`,
-      )
-    }
-  } else if (url.endsWith('.zip')) {
-    if (!(buf[0] === 0x50 && buf[1] === 0x4b)) {
-      await fsp.writeFile(outPath, buf)
-      throw new Error(
-        `Downloaded file for ${url} is not a valid zip (magic mismatch).`,
-      )
-    }
-  }
-
-  await fsp.writeFile(outPath, buf)
-  log_success(`download finished: ${url}`)
+  throw new Error(`Failed to download ${url}: ${lastError?.message || 'unknown error'}`)
 }
 
 async function resolveSidecar(binInfo) {
@@ -762,6 +778,9 @@ async function runTask() {
     } catch (err) {
       log_error(`task::${task.name} try ${i} ==`, err.message)
       if (i === task.retry - 1) throw err
+      const delay = (i + 1) * 3000
+      log_info(`task::${task.name} retrying in ${delay}ms...`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }
   return runTask()
