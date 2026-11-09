@@ -361,7 +361,9 @@ async function downloadFile(url, outPath) {
     }
   }
 
-  throw new Error(`Failed to download ${url}: ${lastError?.message || 'unknown error'}`)
+  throw new Error(
+    `Failed to download ${url}: ${lastError?.message || 'unknown error'}`,
+  )
 }
 
 async function resolveSidecar(binInfo) {
