@@ -489,6 +489,21 @@ async function resolveResource(binInfo) {
 
 // Windows NSIS plugin
 const resolvePlugin = async () => {
+  const pluginDir = path.join(process.env.APPDATA || '', 'Local/NSIS')
+  const pluginPath = path.join(pluginDir, 'SimpleSC.dll')
+  await fsp.mkdir(pluginDir, { recursive: true })
+  if (!FORCE && fs.existsSync(pluginPath)) return
+
+  const bundledDll = path.join(
+    process.cwd(),
+    'src-tauri/packages/windows/SimpleSC.dll',
+  )
+  if (fs.existsSync(bundledDll)) {
+    await fsp.copyFile(bundledDll, pluginPath)
+    log_success(`bundled plugin used: "SimpleSC" -> ${pluginPath}`)
+    return
+  }
+
   const url =
     'https://nsis.sourceforge.io/mediawiki/images/e/ef/NSIS_Simple_Service_Plugin_Unicode_1.30.zip'
   const tempDir = path.join(TEMP_DIR, 'SimpleSC')
@@ -497,11 +512,7 @@ const resolvePlugin = async () => {
     'NSIS_Simple_Service_Plugin_Unicode_1.30.zip',
   )
   const tempDll = path.join(tempDir, 'SimpleSC.dll')
-  const pluginDir = path.join(process.env.APPDATA || '', 'Local/NSIS')
-  const pluginPath = path.join(pluginDir, 'SimpleSC.dll')
-  await fsp.mkdir(pluginDir, { recursive: true })
   await fsp.mkdir(tempDir, { recursive: true })
-  if (!FORCE && fs.existsSync(pluginPath)) return
   try {
     if (!fs.existsSync(tempZip)) {
       await downloadFile(url, tempZip)
